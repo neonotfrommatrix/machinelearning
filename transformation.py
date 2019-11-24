@@ -1,6 +1,7 @@
 #Step 1. transformation.py is processing dataset (preparing for machine learning)
 #Library to manipulate dataframe 
 import pandas as pd
+from sklearn.preprocessing import MultiLabelBinarizer
 
 #Function needed to normalize data
 def normalize_column(dataframe, column_name):
@@ -49,30 +50,43 @@ def categorize_mode(dataframe):
     dataframe['mode'] = mode_col_vals
     return dataframe
 
+def one_hot(dataframe, column):
+    dataframe[column] = pd.Categorical(dataframe[column])
+    df_dummies = pd.get_dummies(dataframe[column], prefix=column)
+    # new_cols = dataframe[column].unique()
+    # for col in new_cols:
+    #     dataframe[col] = 0
+
+    # for idx, row in dataframe.iterrows():
+    #     dataframe.iloc[idx][row['genre']] = 1
+    return pd.concat([dataframe, df_dummies], axis=1).drop(columns=[column])
+
 #Read in data
 data = pd.read_csv('SpotifyFeatures.csv')[:]
-
 #Drop useless data
-dropped_columns = ['genre', 'artist_name', 'track_name', 'track_id']
+dropped_columns = ['artist_name', 'track_name', 'track_id']
 
 #Useful data contains everything but dropped columns
 useful_data = data.drop(columns=dropped_columns)
 
 
-normalized_data = normalize_column(useful_data, 'loudness')
+normalized_data = std_column(useful_data, 'loudness')
 print(normalized_data)
 
 std_data = std_column(normalized_data, 'tempo')
 std_data = std_column(std_data, 'duration_ms')
 print(std_data)
 
-post_key_data = categorize_key(std_data)
-print(post_key_data)
+# post_key_data = categorize_key(std_data)
+# print(post_key_data)
 
-post_time_sig_data = categorize_time_sig(post_key_data)
-print(post_key_data)
+post_time_sig_data = categorize_time_sig(std_data)
+print(std_data)
 
 post_mode_data = categorize_mode(post_time_sig_data)
 print(post_mode_data)
 
-post_mode_data.to_csv('transformed_data.csv')
+final_df = one_hot(post_mode_data, 'genre')
+final_df = one_hot(final_df, 'key')
+print(final_df)
+final_df.to_csv('transformed_data_one_hot_genre-key.csv', index=False)
